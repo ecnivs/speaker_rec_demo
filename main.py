@@ -2,7 +2,6 @@ import asyncio
 from dotenv import load_dotenv
 import logging
 from audio import SpeechToText, TextToSpeech
-import queue
 import threading
 import shutil
 from contextlib import contextmanager
@@ -30,17 +29,20 @@ def new_workspace():
 class Core:
     def __init__(self, workspace) -> None:
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
-        self.stt_queue: queue.Queue = queue.Queue()
-        self.tts_queue: queue.Queue = queue.Queue()
-        self.stt: SpeechToText = SpeechToText(output_queue=self.stt_queue, model_size="small")
+        self.lock: threading.Lock = threading.Lock()
+        self.stt: SpeechToText = SpeechToText(core=self, model_size="small")
         self.tts: TextToSpeech = TextToSpeech(workspace=workspace)
-        self.gemini = Gemini()
+        self.gemini: Gemini = Gemini()
+        self.query = None
 
     async def run(self):
         threading.Thread(target=self.stt.listen, daemon=True).start()
         while True:
-            if not self.stt_queue.empty():
-                self.tts.speak(self.gemini.get_response(self.stt_queue.get()))
+            with self.lock:
+                if self.query:
+                    response = self.gemini.get_response(self.query)
+                    self.logger.info(response)
+                    self.tts.speak(transcript=response["transcripted_response"])
 
             await asyncio.sleep(0.1)
 

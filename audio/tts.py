@@ -8,10 +8,10 @@ import soundfile as sf
 
 class TextToSpeech:
     def __init__(self, workspace):
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.client = Client()
+        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
+        self.client: Client = Client()
         self.workspace = workspace
-        self.voice = "Kore"
+        self.voice: str = "Kore"
 
     def _save_to_wav(self, pcm):
         path = os.path.join(self.workspace, f'{time.time_ns()}_speech.wav')
@@ -31,7 +31,7 @@ class TextToSpeech:
         except Exception as e:
             self.logger.error(f"Error playing {path}: {e}")
 
-    def speak(self, transcript):
+    def speak(self, transcript: str):
         try:
             if not transcript:
                 raise ValueError("Transcript must be a non-empty string")
