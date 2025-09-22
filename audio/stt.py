@@ -69,7 +69,7 @@ class SpeechToText(threading.Thread):
                 else:
                     time.sleep(0.01)
 
-    def transcription_worker(self):
+    def transcription_worker(self) -> None:
         last_text = ""
         while self.running.is_set() or not self.transcription_queue.empty():
             try:
@@ -89,25 +89,3 @@ class SpeechToText(threading.Thread):
     def stop(self) -> None:
         self.running.clear()
         self.logger.info("Stopping SpeechToText thread")
-
-# -------------------------------
-# TEST HARNESS
-# -------------------------------
-if __name__ == "__main__":
-    import queue
-
-    q: queue.Queue[str] = queue.Queue()
-    stt: SpeechToText = SpeechToText(output_queue=q, model_size="small")
-    stt.start()
-
-    try:
-        print("Listening... Press Ctrl+C to stop.")
-        while True:
-            try:
-                text: str = q.get(timeout=0.5)
-            except queue.Empty:
-                pass
-    except KeyboardInterrupt:
-        print("Stopping...")
-        stt.stop()
-        stt.join()
