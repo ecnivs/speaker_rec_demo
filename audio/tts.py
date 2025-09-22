@@ -16,12 +16,12 @@ class TextToSpeech:
         self.workspace = workspace
         self.queue: queue.Queue[str] = output_queue
 
-        self.gemini_voice: str = "Callirhoe"
+        self.gemini_voice: str = "zephyr"
         self.gemini_model: str = "gemini-2.5-flash-preview-tts"
 
         self.coqui_model: str = "tts_models/multilingual/multi-dataset/xtts_v2"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.tts = TTS(model_name=self.coqui_model, progress_bar=False).to(self.device)
+        self.tts = TTS(model_name=self.coqui_model, progress_bar=True).to(self.device)
         self.coqui_voice = "voice.wav"
 
     def play_wav(self, path: str):
