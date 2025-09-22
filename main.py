@@ -7,6 +7,7 @@ import threading
 import shutil
 from contextlib import contextmanager
 import tempfile
+from response import Gemini
 
 # -------------------------------
 # Logging Configuration
@@ -33,16 +34,15 @@ class Core:
         self.tts_queue: queue.Queue = queue.Queue()
         self.stt: SpeechToText = SpeechToText(output_queue=self.stt_queue, model_size="small")
         self.tts: TextToSpeech = TextToSpeech(workspace=workspace)
+        self.gemini = Gemini()
 
     async def run(self):
         threading.Thread(target=self.stt.listen, daemon=True).start()
         while True:
             if not self.stt_queue.empty():
-                query = self.stt_queue.get()
-                self.tts.speak(f"Say Excitedly: You said {query}")
+                self.tts.speak(self.gemini.get_response(self.stt_queue.get()))
 
             await asyncio.sleep(0.1)
-            query = None
 
 if __name__ == "__main__":
     load_dotenv()
