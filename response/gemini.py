@@ -9,12 +9,13 @@ class Gemini:
 
     def get_response(self, query: str) -> dict:
         prompt = f"""
-    You are a voice assistant. Respond to the user query below.
-    Provide output in this format (plain text first, then transcripted version):
-    PLAIN: <plain text response>
-    TRANSCRIPTED: <response with tone/emphasis suitable for speaking>
-    Query: {query}
-    """
+        You are a voice assistant. Detect the correct language for the response.
+        Provide output in this format:
+        LANG: <language code>
+        PLAIN: <plain text response>
+        TRANSCRIPTED: <response with tone/emphasis suitable for speaking>
+        Query: {query}
+        """
 
         response_obj = self.client.models.generate_content(
             model=self.model,
@@ -22,15 +23,18 @@ class Gemini:
         )
 
         text = getattr(response_obj, "text", "")
-        plain, transcripted = None, None
+        lang, plain, transcripted = None, None, None
 
         for line in text.splitlines():
-            if line.startswith("PLAIN:"):
+            if line.startswith("LANG:"):
+                lang = line[len("LANG:"):].strip()
+            elif line.startswith("PLAIN:"):
                 plain = line[len("PLAIN:"):].strip()
             elif line.startswith("TRANSCRIPTED:"):
                 transcripted = line[len("TRANSCRIPTED:"):].strip()
 
         return {
+            "language": lang,
             "response": plain or text,
             "transcripted_response": transcripted or text
         }
