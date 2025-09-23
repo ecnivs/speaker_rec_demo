@@ -138,7 +138,7 @@ class SpeechToText(threading.Thread):
                         continue
 
                     with self.lock:
-                        self.query = text
+                        self.query = { speaker: text }
                     self.logger.info(f"{speaker}: {text}")
                     last_text = text
             except queue.Empty:

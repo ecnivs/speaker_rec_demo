@@ -9,8 +9,8 @@ class Llm:
         self.model = "gemini-2.5-flash"
         self.persona = Persona()
 
-    def get_response(self, query: str) -> dict:
-        prompt = self.persona.build_prompt(query)
+    def get_response(self, speaker: str, query: str) -> dict:
+        prompt = self.persona.build_prompt(speaker=speaker, query=query)
         response_obj = self.client.models.generate_content(
             model=self.model,
             contents=prompt

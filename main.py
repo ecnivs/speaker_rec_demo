@@ -51,8 +51,10 @@ class Core:
                 self._process_queue()
                 with self.stt.lock:
                     if self.stt.query:
+                        (speaker, query), = self.stt.query.items()
+
                         self.stt.pause_listening = True
-                        response = self.llm.get_response(self.stt.query)
+                        response = self.llm.get_response(speaker=speaker, query=query)
                         self.logger.info(response)
 
                         lang = response["language"].lower()

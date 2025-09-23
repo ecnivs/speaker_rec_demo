@@ -39,13 +39,13 @@ class Persona:
 
         return ', '.join(formatted)
 
-    def _get_personality(self) -> str:
+    def _get_personality(self, speaker: str) -> str:
         sections = []
         for category, trait_dict in self.traits.items():
             sections.append(f"{category}: {self._format_traits(trait_dict)}")
-        return f"You are {self.name}, {self.role}.\n{chr(10).join(sections)}."
+        return f"I am {speaker}. You are {self.name}, {self.role}.\n{chr(10).join(sections)}."
 
-    def build_prompt(self, query: str) -> str:
+    def build_prompt(self, speaker: str, query: str) -> str:
         output_lines = [f"{key}: {value}" for key, value in self.output_format.items()]
         output_section = "Provide output in this format:\n" + "\n".join(output_lines)
-        return f"{self._get_personality()}\n\n{output_section}\nQuery: {query}"
+        return f"{self._get_personality(speaker=speaker)}\n\n{output_section}\nQuery: {query}"
