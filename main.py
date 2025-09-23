@@ -44,11 +44,17 @@ class Core:
                 self.stt.condition.notify()
                 self.stt.pause_listening = False
 
+    def _thread(self, target, args = None):
+        if args:
+            threading.Thread(target=target, args=args, daemon=True).start()
+        else:
+            threading.Thread(target=target, daemon=True).start()
+
     def run(self):
         try:
-            self.speech_thread = threading.Thread(target=self.stt.listen, daemon=True).start()
+            self._thread(target=self.stt.listen)
+
             while True:
-                self._process_queue()
                 with self.stt.lock:
                     if self.stt.query:
                         (speaker, query), = self.stt.query.items()
@@ -60,14 +66,15 @@ class Core:
                         lang = response["language"].lower()
                         try:
                             if ((self.tts.voices_dir) / f"{lang}.wav").exists():
-                                self.tts.speak_local(text=response["response"], language=lang)
+                                self._thread(target=self.tts.speak_local, args=(response["response"], lang))
                             else:
-                                self.tts.speak(transcript=response["transcripted_response"], language=lang)
+                                self._thread(target=self.tts.speak, args=(response["transcripted_response"], lang))
                         except Exception as e:
-                            self.tts.speak(transcript=response["transcripted_response"], language=lang)
+                            self._thread(target=self.tts.speak, args=(response["transcripted_response"], lang))
 
                     self.stt.query = None
 
+                self._process_queue()
                 time.sleep(0.1)
         except KeyboardInterrupt:
             self.logger.info("Shutting down...")

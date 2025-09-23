@@ -138,8 +138,8 @@ class SpeechToText(threading.Thread):
                         continue
 
                     with self.lock:
-                        self.query = { speaker: text }
-                    self.logger.info(f"{speaker}: {text}")
+                        self.query = { speaker.capitalize(): text }
+                    self.logger.info(f"{speaker.capitalize()}: {text}")
                     last_text = text
             except queue.Empty:
                 continue

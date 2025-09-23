@@ -9,6 +9,7 @@ from TTS.api import TTS
 import torch
 import queue
 from pathlib import Path
+import re
 
 class TextToSpeech:
     def __init__(self, workspace, output_queue: queue.Queue[str]):
@@ -36,9 +37,18 @@ class TextToSpeech:
             self.logger.error(f"Error playing {path}: {e}")
 
     def speak_local(self, text: str, language: str):
-        path = os.path.join(self.workspace, f'{time.time_ns()}_speech.wav')
-        self.tts.tts_to_file(text, file_path=path, speaker_wav=self.voices_dir / f"{language}.wav", language=language)
-        self.queue.put(str(path))
+        sentences = re.split(r'(?<=[.!?。！？])\s+', text.strip())
+        for sentence in sentences:
+            if not sentence:
+                continue
+            path = os.path.join(self.workspace, f'{time.time_ns()}_speech.wav')
+            self.tts.tts_to_file(
+                sentence,
+                file_path=path,
+                speaker_wav=self.voices_dir / f"{language}.wav",
+                language=language
+            )
+            self.queue.put(str(path))
 
     def speak(self, transcript: str, language: str):
         try:
