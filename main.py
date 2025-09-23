@@ -53,18 +53,14 @@ class Core:
                     if self.stt.query:
                         self.stt.pause_listening = True
                         response = self.gemini.get_response(self.stt.query)
-                        self.logger.info(response)
 
                         lang = response["language"]
                         try:
                             if ((self.tts.voices_dir) / f"{lang}.wav").exists():
-                                self.logger.info("Using Local TTS")
                                 self.tts.speak_local(text=response["response"], language=lang)
                             else:
-                                self.logger.info("Using Gemini TTS")
                                 self.tts.speak(transcript=response["transcripted_response"], language=lang)
                         except Exception as e:
-                            self.logger.info(f"Fallback to Gemini TTS: {e}")
                             self.tts.speak(transcript=response["transcripted_response"], language=lang)
 
                     self.stt.query = None

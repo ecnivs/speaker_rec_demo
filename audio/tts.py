@@ -44,6 +44,7 @@ class TextToSpeech:
         try:
             if not transcript:
                 raise ValueError("Transcript must be a non-empty string")
+            self.logger.info(transcript)
 
             response = self.client.models.generate_content(
                 model=self.gemini_model,
