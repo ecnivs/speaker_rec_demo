@@ -6,7 +6,7 @@ import threading
 import shutil
 from contextlib import contextmanager
 import tempfile
-from response import Gemini
+from response import Gemini, Persona
 import time
 from pathlib import Path
 
@@ -34,7 +34,8 @@ class Core:
         self.stt: SpeechToText = SpeechToText(model_size="small")
         self.tts_queue: queue.Queue[str] = queue.Queue()
         self.tts: TextToSpeech = TextToSpeech(workspace=workspace, output_queue=self.tts_queue)
-        self.gemini: Gemini = Gemini()
+        self.persona = Persona()
+        self.gemini: Gemini = Gemini(self.persona)
 
     def _process_queue(self):
         if not self.tts_queue.empty():

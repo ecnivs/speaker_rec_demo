@@ -2,21 +2,14 @@ import logging
 from google.genai import Client
 
 class Gemini:
-    def __init__(self):
+    def __init__(self, persona):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.client = Client()
         self.model = "gemini-2.5-flash"
+        self.persona = persona
 
     def get_response(self, query: str) -> dict:
-        prompt = f"""
-        You are a voice assistant. Detect the correct language for the response.
-        Provide output in this format:
-        LANG: <language code>
-        PLAIN: <plain text response>
-        TRANSCRIPTED: <response with tone/emphasis suitable for speaking>
-        Query: {query}
-        """
-
+        prompt = self.persona.build_prompt(query)
         response_obj = self.client.models.generate_content(
             model=self.model,
             contents=prompt
