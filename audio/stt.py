@@ -9,6 +9,9 @@ import queue
 import time
 from typing import List, Optional, Any
 import webrtcvad
+from pyannote.audio import Model, Inference
+import os
+import torch
 
 class SpeechToText(threading.Thread):
     def __init__(self, model_size: str ="small") -> None:
@@ -16,6 +19,10 @@ class SpeechToText(threading.Thread):
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self.query = None
         self.pause_listening: bool = True
+
+        self.model = Model.from_pretrained("pyannote/embedding", use_auth_token=os.getenv("HF_API_KEY"))
+        self.inference = Inference(self.model, window="whole")
+        self.embedding = self.inference(".voices/en.wav")
 
         self.sample_rate: int = 16000
         self.chunk_duration: float = 3
@@ -29,11 +36,11 @@ class SpeechToText(threading.Thread):
         self.running: threading.Event = threading.Event()
         self.running.set()
 
-        self.model: WhisperModel = WhisperModel(model_size, device="cuda")
+        self.whisper_model: WhisperModel = WhisperModel(model_size, device="cuda")
         self.vad: webrtcvad.Vad = webrtcvad.Vad(2)
 
         self.transcription_queue: queue.Queue[np.ndarray] = queue.Queue()
-        threading.Thread(target=self.transcription_worker, daemon=True).start()
+        threading.Thread(target=self._transcription_worker, daemon=True).start()
 
     def audio_callback(self, indata: np.ndarray, frames: int, time_info: Any, status: Optional[sd.CallbackFlags]) -> None:
         if status:
@@ -79,16 +86,40 @@ class SpeechToText(threading.Thread):
                 else:
                     time.sleep(0.01)
 
-    def transcription_worker(self) -> None:
+    def _is_same_speaker(self, chunk: np.ndarray, threshold: float = 0.6) -> bool:
+        sample = {"waveform": torch.tensor(chunk).unsqueeze(0), "sample_rate": self.sample_rate}
+        emb = self.inference(sample)
+
+        if isinstance(emb, torch.Tensor):
+            emb = emb.detach().cpu().numpy()
+        if isinstance(self.embedding, torch.Tensor):
+            ref = self.embedding.detach().cpu().numpy()
+        else:
+            ref = self.embedding
+
+        emb = emb.flatten()
+        ref = ref.flatten()
+
+        sim = np.dot(ref, emb) / (np.linalg.norm(ref) * np.linalg.norm(emb))
+        self.logger.info(f"Speaker similarity: {sim:.3f}")
+        return sim > threshold
+
+    def _transcription_worker(self) -> None:
         last_text = ""
         while self.running.is_set() or not self.transcription_queue.empty():
             try:
                 chunk = self.transcription_queue.get(timeout=0.1)
-                segments, info = self.model.transcribe(chunk, beam_size=5)
+
+                if not self._is_same_speaker(chunk, threshold=0.4):
+                    self.logger.info("Ignored: speaker does not match")
+                    continue
+
+                segments, info = self.whisper_model.transcribe(chunk, beam_size=5)
                 for segment in segments:
                     text = segment.text.strip()
                     if not text or text == last_text or text.lower() == "you" or info.language == "nn":
                         continue
+
                     with self.lock:
                         self.query = text
                     self.logger.info(f"You: {text}")
