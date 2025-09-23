@@ -15,6 +15,7 @@ class SpeechToText(threading.Thread):
         super().__init__(daemon=True)
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self.query = None
+        self.pause_listening: bool = True
 
         self.sample_rate: int = 16000
         self.chunk_duration: float = 3
@@ -23,6 +24,7 @@ class SpeechToText(threading.Thread):
         self.overlap_size: int = int(self.overlap_duration * self.sample_rate)
 
         self.buffer: List[float] = []
+        self.condition:threading.Condition = threading.Condition()
         self.lock: threading.Lock = threading.Lock()
         self.running: threading.Event = threading.Event()
         self.running.set()
@@ -36,7 +38,8 @@ class SpeechToText(threading.Thread):
     def audio_callback(self, indata: np.ndarray, frames: int, time_info: Any, status: Optional[sd.CallbackFlags]) -> None:
         if status:
             self.logger.warning(f"Audio callback status: {status}")
-        self.buffer.extend(indata[:, 0])
+        if not self.pause_listening:
+            self.buffer.extend(indata[:, 0])
 
     def listen(self) -> None:
         self.logger.info("Listening...")
@@ -48,6 +51,11 @@ class SpeechToText(threading.Thread):
             blocksize=1024
         ):
             while self.running.is_set():
+
+                with self.condition:
+                    while self.pause_listening:
+                        self.condition.wait()
+
                 if len(self.buffer) >= self.chunk_size:
                     chunk = np.array(self.buffer[:self.chunk_size], dtype=np.float32)
                     self.buffer = self.buffer[self.chunk_size - self.overlap_size:]
@@ -76,10 +84,10 @@ class SpeechToText(threading.Thread):
         while self.running.is_set() or not self.transcription_queue.empty():
             try:
                 chunk = self.transcription_queue.get(timeout=0.1)
-                segments, _ = self.model.transcribe(chunk, beam_size=5)
+                segments, info = self.model.transcribe(chunk, beam_size=5)
                 for segment in segments:
                     text = segment.text.strip()
-                    if not text or text == last_text or text.lower() == "you":
+                    if not text or text == last_text or text.lower() == "you" or info.language == "nn":
                         continue
                     with self.lock:
                         self.query = text

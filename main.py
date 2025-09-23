@@ -39,14 +39,19 @@ class Core:
     def _process_queue(self):
         if not self.tts_queue.empty():
             self.tts.play_wav(self.tts_queue.get())
+        else:
+            with self.stt.condition:
+                self.stt.pause_listening = False
+                self.stt.condition.notify()
 
     def run(self):
         try:
-            threading.Thread(target=self.stt.listen, daemon=True).start()
+            self.speech_thread = threading.Thread(target=self.stt.listen, daemon=True).start()
             while True:
                 self._process_queue()
                 with self.stt.lock:
                     if self.stt.query:
+                        self.stt.pause_listening = True
                         response = self.gemini.get_response(self.stt.query)
                         self.logger.info(response)
 
@@ -63,10 +68,12 @@ class Core:
                             self.tts.speak(transcript=response["transcripted_response"], language=lang)
 
                     self.stt.query = None
-                time.sleep(0.1)
 
+                time.sleep(0.1)
         except KeyboardInterrupt:
-            pass
+            self.logger.info("Shutting down...")
+        except Exception as e:
+            self.logger.critical(f"Error: {e}")
 
 if __name__ == "__main__":
     load_dotenv()
