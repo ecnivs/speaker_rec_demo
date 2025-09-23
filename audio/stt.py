@@ -11,10 +11,11 @@ from typing import List, Optional, Any
 import webrtcvad
 
 class SpeechToText(threading.Thread):
-    def __init__(self, core, model_size: str ="small") -> None:
+    def __init__(self, model_size: str ="small") -> None:
         super().__init__(daemon=True)
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
-        self.core = core
+        self.query = None
+
         self.sample_rate: int = 16000
         self.chunk_duration: float = 3
         self.overlap_duration: float = 0.15
@@ -22,7 +23,7 @@ class SpeechToText(threading.Thread):
         self.overlap_size: int = int(self.overlap_duration * self.sample_rate)
 
         self.buffer: List[float] = []
-        self.lock: threading.Lock = self.core.lock
+        self.lock: threading.Lock = threading.Lock()
         self.running: threading.Event = threading.Event()
         self.running.set()
 
@@ -81,7 +82,7 @@ class SpeechToText(threading.Thread):
                     if not text or text == last_text or text.lower() == "you":
                         continue
                     with self.lock:
-                        self.core.query = text
+                        self.query = text
                     self.logger.info(f"You: {text}")
                     last_text = text
             except queue.Empty:

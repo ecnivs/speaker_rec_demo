@@ -8,6 +8,7 @@ import soundfile as sf
 from TTS.api import TTS
 import torch
 import queue
+from pathlib import Path
 
 class TextToSpeech:
     def __init__(self, workspace, output_queue: queue.Queue[str]):
@@ -22,8 +23,9 @@ class TextToSpeech:
         self.coqui_model: str = "tts_models/multilingual/multi-dataset/xtts_v2"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tts = TTS(model_name=self.coqui_model, progress_bar=True).to(self.device)
-        self.voices_dir = "voices"
-        self.coqui_voice = os.path.join(self.voices_dir, "en.wav")
+
+        self.voices_dir: Path = Path(".voices")
+        self.voices_dir.mkdir(exist_ok=True)
 
     def play_wav(self, path: str):
         try:
@@ -33,12 +35,12 @@ class TextToSpeech:
         except Exception as e:
             self.logger.error(f"Error playing {path}: {e}")
 
-    def speak_local(self, text: str):
+    def speak_local(self, text: str, language: str):
         path = os.path.join(self.workspace, f'{time.time_ns()}_speech.wav')
-        self.tts.tts_to_file(text, file_path=path, speaker_wav=self.coqui_voice, language="en")
+        self.tts.tts_to_file(text, file_path=path, speaker_wav=self.voices_dir / f"{language}.wav", language=language)
         self.queue.put(str(path))
 
-    def speak(self, transcript: str):
+    def speak(self, transcript: str, language: str):
         try:
             if not transcript:
                 raise ValueError("Transcript must be a non-empty string")
@@ -67,8 +69,16 @@ class TextToSpeech:
             if not data:
                 raise ValueError("No audio data found in response")
 
-            path = os.path.join(self.workspace, f'{time.time_ns()}_speech.wav')
-            with wave.open(path, "wb") as wf:
+            path = (self.workspace / f'{time.time_ns()}_speech.wav')
+            language_wav = (self.voices_dir / f"{language}.wav")
+            if language_wav.exists():
+                info = sf.info(language_wav)
+                if (info.frames / info.samplerate) <= 3:
+                    path = language_wav
+            if not language_wav.exists():
+                path = language_wav
+
+            with wave.open(str(path), "wb") as wf:
                 wf.setnchannels(1)
                 wf.setsampwidth(2)
                 wf.setframerate(30000)
