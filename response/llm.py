@@ -1,12 +1,13 @@
 import logging
 from google.genai import Client
+from .persona import Persona
 
-class Gemini:
-    def __init__(self, persona):
+class Llm:
+    def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.client = Client()
         self.model = "gemini-2.5-flash"
-        self.persona = persona
+        self.persona = Persona()
 
     def get_response(self, query: str) -> dict:
         prompt = self.persona.build_prompt(query)

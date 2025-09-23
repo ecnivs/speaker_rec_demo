@@ -6,7 +6,7 @@ import threading
 import shutil
 from contextlib import contextmanager
 import tempfile
-from response import Gemini, Persona
+from response import Llm
 import time
 from pathlib import Path
 
@@ -34,16 +34,15 @@ class Core:
         self.stt: SpeechToText = SpeechToText(model_size="small")
         self.tts_queue: queue.Queue[str] = queue.Queue()
         self.tts: TextToSpeech = TextToSpeech(workspace=workspace, output_queue=self.tts_queue)
-        self.persona = Persona()
-        self.gemini: Gemini = Gemini(self.persona)
+        self.llm: Llm = Llm()
 
     def _process_queue(self):
         if not self.tts_queue.empty():
             self.tts.play_wav(self.tts_queue.get())
         else:
             with self.stt.condition:
-                self.stt.pause_listening = False
                 self.stt.condition.notify()
+                self.stt.pause_listening = False
 
     def run(self):
         try:
@@ -53,9 +52,10 @@ class Core:
                 with self.stt.lock:
                     if self.stt.query:
                         self.stt.pause_listening = True
-                        response = self.gemini.get_response(self.stt.query)
+                        response = self.llm.get_response(self.stt.query)
+                        self.logger.info(response)
 
-                        lang = response["language"]
+                        lang = response["language"].lower()
                         try:
                             if ((self.tts.voices_dir) / f"{lang}.wav").exists():
                                 self.tts.speak_local(text=response["response"], language=lang)

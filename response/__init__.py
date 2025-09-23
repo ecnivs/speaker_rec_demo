@@ -1,4 +1,4 @@
-from .gemini import Gemini
+from .llm import Llm
 from .persona import Persona
 
-__all__ = ["Gemini", "Persona"]
+__all__ = ["Llm", "Persona"]

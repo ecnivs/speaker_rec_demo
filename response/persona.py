@@ -4,10 +4,10 @@ class Persona:
     def __init__(self) -> None:
         self.name = "Blossom"
         self.role = "Personal Assistant"
-        self.default_language = "English"
 
         self.traits: Dict[str, Dict[str, bool]] = {
             "Personality": {
+                "respectful": True,
                 "direct": True,
                 "sarcastic when appropriate": True,
                 "concise": True,
@@ -24,7 +24,7 @@ class Persona:
         }
 
         self.output_format: Dict[str, str] = {
-            "LANG": "language code",
+            "LANG": "language code, detect the correct language for the response",
             "PLAIN": "plain text response",
             "TRANSCRIPTED": "response with tone/emphasis suitable for speaking",
         }
@@ -43,7 +43,7 @@ class Persona:
         sections = []
         for category, trait_dict in self.traits.items():
             sections.append(f"{category}: {self._format_traits(trait_dict)}")
-        return f"You are {self.name}, {self.role}.\n{chr(10).join(sections)}\nRespond in {self.default_language}."
+        return f"You are {self.name}, {self.role}.\n{chr(10).join(sections)}."
 
     def build_prompt(self, query: str) -> str:
         output_lines = [f"{key}: {value}" for key, value in self.output_format.items()]

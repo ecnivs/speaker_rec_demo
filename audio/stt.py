@@ -64,9 +64,11 @@ class SpeechToText(threading.Thread):
         ):
             while self.running.is_set():
 
-                with self.condition:
-                    while self.pause_listening:
-                        self.condition.wait()
+                if self.pause_listening:
+                    with self.condition:
+                        while self.pause_listening:
+                            self.condition.wait()
+                        self.buffer.clear()
 
                 if len(self.buffer) >= self.chunk_size:
                     chunk = np.array(self.buffer[:self.chunk_size], dtype=np.float32)
