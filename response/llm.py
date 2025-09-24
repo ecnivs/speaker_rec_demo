@@ -1,16 +1,16 @@
 import logging
 from google.genai import Client
-from .persona import Persona
+from .prompt import Prompt
 
 class Llm:
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.client = Client()
         self.model = "gemini-2.5-flash"
-        self.persona = Persona()
+        self.prompt = Prompt()
 
     def get_response(self, speaker: str, query: str) -> dict:
-        prompt = self.persona.build_prompt(speaker=speaker, query=query)
+        prompt = self.prompt.build(speaker=speaker, query=query)
         response_obj = self.client.models.generate_content(
             model=self.model,
             contents=prompt

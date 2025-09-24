@@ -1,4 +1,4 @@
 from .llm import Llm
-from .persona import Persona
+from .prompt import Prompt
 
-__all__ = ["Llm", "Persona"]
+__all__ = ["Llm", "Prompt"]

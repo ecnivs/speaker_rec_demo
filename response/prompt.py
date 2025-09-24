@@ -1,6 +1,6 @@
 from typing import Dict
 
-class Persona:
+class Prompt:
     def __init__(self) -> None:
         self.name = "Blossom"
         self.role = "Personal Assistant"
@@ -45,7 +45,7 @@ class Persona:
             sections.append(f"{category}: {self._format_traits(trait_dict)}")
         return f"I am {speaker}. You are {self.name}, {self.role}.\n{chr(10).join(sections)}."
 
-    def build_prompt(self, speaker: str, query: str) -> str:
+    def build(self, speaker: str, query: str) -> str:
         output_lines = [f"{key}: {value}" for key, value in self.output_format.items()]
         output_section = "Provide output in this format:\n" + "\n".join(output_lines)
         return f"{self._get_personality(speaker=speaker)}\n\n{output_section}\nQuery: {query}"
