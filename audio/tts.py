@@ -17,8 +17,9 @@ class TextToSpeech:
         self.client: Client = Client()
         self.workspace = workspace
         self.queue: queue.Queue[str] = output_queue
+        self.is_playing = False
 
-        self.gemini_voice: str = "zephyr"
+        self.gemini_voice: str = "kore"
         self.gemini_model: str = "gemini-2.5-flash-preview-tts"
 
         self.coqui_model: str = "tts_models/multilingual/multi-dataset/xtts_v2"
@@ -29,10 +30,12 @@ class TextToSpeech:
         self.voices_dir.mkdir(exist_ok=True)
 
     def play_wav(self, path: str):
+        self.is_playing = True
         try:
             audio, samplerate = sf.read(path)
             sd.play(audio, samplerate)
             sd.wait()
+            self.is_playing = False
         except Exception as e:
             self.logger.error(f"Error playing {path}: {e}")
 

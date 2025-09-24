@@ -13,9 +13,11 @@ from pyannote.audio import Model, Inference
 import os
 import torch
 from pathlib import Path
+import noisereduce as nr
+from scipy.signal import butter, lfilter
 
 class SpeechToText(threading.Thread):
-    def __init__(self, model_size: str ="small") -> None:
+    def __init__(self, model_size: str) -> None:
         super().__init__(daemon=True)
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self.query = None
@@ -74,6 +76,10 @@ class SpeechToText(threading.Thread):
                     chunk = np.array(self.buffer[:self.chunk_size], dtype=np.float32)
                     self.buffer = self.buffer[self.chunk_size - self.overlap_size:]
 
+                    b, a = butter(1, 80 / (0.5 * self.sample_rate), btype='high')
+                    chunk = nr.reduce_noise(y=lfilter(b, a, chunk), sr=self.sample_rate)
+                    chunk = chunk.astype(np.float32)
+ 
                     pcm_data: bytes = (chunk * 32768).astype(np.int16).tobytes()
                     frame_duration_ms: int = 30
                     frame_size: int = int(self.sample_rate * frame_duration_ms / 1000)
@@ -126,7 +132,7 @@ class SpeechToText(threading.Thread):
             try:
                 chunk = self.transcription_queue.get(timeout=0.1)
 
-                speaker = self._get_best_speaker(chunk, threshold=0.2)
+                speaker = self._get_best_speaker(chunk, threshold=0.25)
                 if speaker is None:
                     self.logger.info("Ignored: speaker does not match any known speaker")
                     continue

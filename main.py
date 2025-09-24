@@ -39,7 +39,7 @@ class Core:
     def _process_queue(self):
         if not self.tts_queue.empty():
             self.tts.play_wav(self.tts_queue.get())
-        else:
+        elif not self.tts.is_playing:
             with self.stt.condition:
                 self.stt.condition.notify()
                 self.stt.pause_listening = False
