@@ -1,4 +1,4 @@
-<h1 align="center">Speaker Recognition Demo</h1>
+<h1 align="center">Speaker Recognition</h1>
 <p align="center"><em>demonstration of speaker recognition using embeddings.</em></p>
 
 ## 🛠️ Prerequisites
