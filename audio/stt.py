@@ -1,20 +1,16 @@
 import threading
 import numpy as np
-import threading
-import numpy as np
 import sounddevice as sd
 from faster_whisper import WhisperModel
 import logging
 import queue
 import time
 from typing import List, Optional, Any
-import webrtcvad
 from pyannote.audio import Model, Inference
 import os
 import torch
 from pathlib import Path
-import noisereduce as nr
-from scipy.signal import butter, lfilter
+from webrtc_audio_processing import AudioProcessingModule as AP
 
 class SpeechToText(threading.Thread):
     def __init__(self, model_size: str) -> None:
@@ -35,13 +31,17 @@ class SpeechToText(threading.Thread):
         self.overlap_size: int = int(self.overlap_duration * self.sample_rate)
 
         self.buffer: List[float] = []
-        self.condition:threading.Condition = threading.Condition()
+        self.condition: threading.Condition = threading.Condition()
         self.lock: threading.Lock = threading.Lock()
         self.running: threading.Event = threading.Event()
         self.running.set()
 
         self.whisper_model: WhisperModel = WhisperModel(model_size, device="cuda")
-        self.vad: webrtcvad.Vad = webrtcvad.Vad(2)
+
+        self.ap = AP(enable_vad=True, enable_ns=True)
+        self.ap.set_stream_format(self.sample_rate, 1)
+        self.ap.set_ns_level(1)
+        self.ap.set_vad_level(1)
 
         self.transcription_queue: queue.Queue[np.ndarray] = queue.Queue()
         threading.Thread(target=self._transcription_worker, daemon=True).start()
@@ -62,10 +62,9 @@ class SpeechToText(threading.Thread):
             callback=self.audio_callback,
             channels=1,
             samplerate=self.sample_rate,
-            blocksize=1024
+            blocksize=160
         ):
             while self.running.is_set():
-
                 if self.pause_listening:
                     with self.condition:
                         while self.pause_listening:
@@ -76,26 +75,25 @@ class SpeechToText(threading.Thread):
                     chunk = np.array(self.buffer[:self.chunk_size], dtype=np.float32)
                     self.buffer = self.buffer[self.chunk_size - self.overlap_size:]
 
-                    b, a = butter(1, 80 / (0.5 * self.sample_rate), btype='high')
-                    chunk = nr.reduce_noise(y=lfilter(b, a, chunk), sr=self.sample_rate)
-                    chunk = chunk.astype(np.float32)
- 
                     pcm_data: bytes = (chunk * 32768).astype(np.int16).tobytes()
-                    frame_duration_ms: int = 30
-                    frame_size: int = int(self.sample_rate * frame_duration_ms / 1000)
+                    frame_size = int(self.sample_rate * 0.01) * 2
+                    voiced_frames = 0
+                    processed_chunk = bytearray()
 
-                    speech_frames: int = 0
-                    for start in range(0, len(chunk), frame_size):
-                        frame: bytes = pcm_data[start*2:(start+frame_size)*2]
-                        if len(frame) < frame_size * 2:
-                            break
-                        if self.vad.is_speech(frame, sample_rate=self.sample_rate):
-                            speech_frames += 1
+                    for start in range(0, len(pcm_data), frame_size):
+                        frame = pcm_data[start:start+frame_size]
+                        if len(frame) < frame_size:
+                            frame += b'\0' * (frame_size - len(frame))
+                        out_frame = self.ap.process_stream(frame)
+                        processed_chunk.extend(out_frame)
+                        if self.ap.has_voice():
+                            voiced_frames += 1
 
-                    if speech_frames < 2:
+                    if voiced_frames < 2:
                         continue
 
-                    self.transcription_queue.put(chunk)
+                    processed_float = np.frombuffer(processed_chunk, dtype=np.int16).astype(np.float32) / 32768
+                    self.transcription_queue.put(processed_float)
                 else:
                     time.sleep(0.01)
 
