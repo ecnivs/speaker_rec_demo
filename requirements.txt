@@ -132,7 +132,6 @@ PyYAML==6.0.2
 regex==2025.9.18
 requests==2.32.5
 rich==14.1.0
-rnnoise-wrapper @ file:///home/cipher/dev/Blossom/RNNoise_Wrapper/dist/rnnoise_wrapper-1.1-py3-none-any.whl#sha256=d821b6b86772bfcea11e8f79f18be6769c70f20876efdc40d3a1050b9ca3a506
 rsa==4.9.1
 ruamel.yaml==0.18.15
 ruamel.yaml.clib==0.2.14
