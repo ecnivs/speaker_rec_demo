@@ -132,7 +132,7 @@ class SpeechToText(threading.Thread):
             try:
                 chunk = self.transcription_queue.get(timeout=0.1)
 
-                speaker = self._get_best_speaker(chunk, threshold=0.25)
+                speaker = self._get_best_speaker(chunk, threshold=0.20)
                 if speaker is None:
                     self.logger.info("Ignored: speaker does not match any known speaker")
                     continue
