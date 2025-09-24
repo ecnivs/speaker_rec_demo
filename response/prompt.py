@@ -26,7 +26,7 @@ class Prompt:
         self.output_format: Dict[str, str] = {
             "LANG": "language code, detect the correct language for the response",
             "PLAIN": "plain text response",
-            "TRANSCRIPTED": "response with tone/emphasis suitable for speaking",
+            "TRANSCRIPTED": "response with tone/emphasis suitable for speaking. e,g; say <tone>: <message>",
         }
 
     def _format_traits(self, trait_dict: Dict[str, bool]) -> str:
